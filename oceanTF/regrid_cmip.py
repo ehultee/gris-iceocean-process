@@ -5,7 +5,11 @@ import numpy as np
 from pyproj import Transformer
 from tqdm import tqdm
 
-def regrid_cmip(cmipTFfile_cropped,xreg,yreg,zreg):
+def regrid_cmip(cmipTFfile_cropped,xreg,yreg,zreg, which_variable='TF'):
+    '''
+    which_variable: str, optional. Default 'TF'.
+        Must match the name of a variable in the dataset you want to regrid.
+    '''
 
     # output filename
     outfile = cmipTFfile_cropped.replace('.nc','_regrid.nc')
@@ -18,15 +22,15 @@ def regrid_cmip(cmipTFfile_cropped,xreg,yreg,zreg):
     x = ds['x'].values
     y = ds['y'].values
     z = ds['lev'].values/1e2 # convert from cm to m (specific to CESM2-WACCM?)
-    TF = ds['TF'].values
+    TF = ds[which_variable].values ## based on a function for regridding TF, but variable defined when called
     
-    # first interpolate cmip TF onto regular depth grid
+    # first interpolate cmip variable onto regular depth grid
     TF_zreg = np.full((TF.shape[0], len(zreg), TF.shape[2]), np.nan)
     for i in range(TF_zreg.shape[0]):
         for j in range(TF_zreg.shape[2]):
             TF_zreg[i,:,j] = np.interp(zreg, z, TF[i,:,j])
 
-    # now interpolate cmip TF onto regular horizontal grid
+    # now interpolate cmip variable onto regular horizontal grid
     TF_zreg_xyreg = np.full((TF.shape[0], len(zreg), len(yreg), len(xreg)), np.nan)
     points = np.column_stack((x, y))
     Xreg, Yreg = np.meshgrid(xreg, yreg)
@@ -41,13 +45,16 @@ def regrid_cmip(cmipTFfile_cropped,xreg,yreg,zreg):
     lonreg,latreg = polarstereo2latlon.transform(Xreg,Yreg)
 
     # catch any TF<0
-    TF_zreg_xyreg[TF_zreg_xyreg<0] = 0
+    if which_variable=='TF':
+        TF_zreg_xyreg[TF_zreg_xyreg<0] = 0
+    else:
+        print('Regridding non-TF variable. Did not correct negative values.')
 
     # put into xarray dataset
-    ds_out = xr.Dataset({'TF': (['time', 'depth', 'y', 'x'], TF_zreg_xyreg.astype(np.float32))},
+    ds_out = xr.Dataset({which_variable: (['time', 'depth', 'y', 'x'], TF_zreg_xyreg.astype(np.float32))},
                         coords={'time': t,'depth': zreg.astype(np.float32),
                                 'y': yreg.astype(np.float32),'x': xreg.astype(np.float32),
                                 'lat': (('y', 'x'), latreg.astype(np.float32)),'lon': (('y', 'x'), lonreg.astype(np.float32))})
 
     # save out to netcdf
-    ds_out.to_netcdf(outfile, encoding={"TF": {"zlib": True, "complevel": 9}})
+    ds_out.to_netcdf(outfile, encoding={which_variable: {"zlib": True, "complevel": 9}})

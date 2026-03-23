@@ -5,7 +5,11 @@ import numpy as np
 from pyproj import Transformer
 from tqdm import tqdm
 
-def regrid_en4(en4file_cropped,xreg,yreg,zreg):
+def regrid_en4(en4file_cropped,xreg,yreg,zreg, which_variable='TF'):
+    '''
+    which_variable: str, optional. Default 'TF'.
+        Must match the name of a variable in the dataset you want to regrid.
+    '''
 
     # output filename
     outfile = en4file_cropped.replace('.nc','_regrid.nc')
@@ -18,7 +22,7 @@ def regrid_en4(en4file_cropped,xreg,yreg,zreg):
     lat = ds['lat'].values
     lon = ds['lon'].values
     z = ds['depth'].values
-    TF = ds['TF'].values
+    TF = ds[which_variable].values ## takes the variable specified in call
     LON, LAT = np.meshgrid(lon,lat)
 
     # convert to EPSG:3413
@@ -30,7 +34,7 @@ def regrid_en4(en4file_cropped,xreg,yreg,zreg):
     y = y.flatten()
     TF = TF.reshape((len(t),len(z),len(x)))
     
-    # first interpolate cmip TF onto regular depth grid
+    # first interpolate cmip variable onto regular depth grid
     TF_zreg = np.full((TF.shape[0], len(zreg), TF.shape[2]), np.nan)
     for i in range(TF_zreg.shape[0]):
         for j in range(TF_zreg.shape[2]):
@@ -50,13 +54,16 @@ def regrid_en4(en4file_cropped,xreg,yreg,zreg):
     lonreg,latreg = polarstereo2latlon.transform(Xreg,Yreg)
 
     # catch any TF<0
-    TF_zreg_xyreg[TF_zreg_xyreg<0] = 0
+    if which_variable=='TF':
+        TF_zreg_xyreg[TF_zreg_xyreg<0] = 0
+    else:
+        print('Regridding non-TF variable. Did not correct negative values.')
 
     # put into xarray dataset
-    ds_out = xr.Dataset({'TF': (['time', 'depth', 'y', 'x'], TF_zreg_xyreg.astype(np.float32))},
+    ds_out = xr.Dataset({which_variable: (['time', 'depth', 'y', 'x'], TF_zreg_xyreg.astype(np.float32))},
                         coords={'time': t,'depth': zreg.astype(np.float32),
                                 'y': yreg.astype(np.float32),'x': xreg.astype(np.float32),
                                 'lat': (('y', 'x'), latreg.astype(np.float32)),'lon': (('y', 'x'), lonreg.astype(np.float32))})
 
     # save out to netcdf
-    ds_out.to_netcdf(outfile, encoding={"TF": {"zlib": True, "complevel": 9}})
+    ds_out.to_netcdf(outfile, encoding={which_variable: {"zlib": True, "complevel": 9}})
