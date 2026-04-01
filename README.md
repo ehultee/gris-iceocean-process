@@ -6,7 +6,9 @@ The notebooks and Python modules in this repository are used to create ocean for
 1. Ocean thermal forcing
 2. Runoff
 
-Together, these two datasets can be used to calculate submarine melt rates at outlet glacier termini around the ice sheet. The ice sheet models then simulate iceberg calving processes and melt+calving together can be used to calculate the retreat or advance of outlet glacier termini through time.  A third dataset, salinity, has been processed in a similar way at the request of some modelling groups.
+Together, these two datasets can be used to calculate submarine melt rates at outlet glacier termini around the ice sheet. The ice sheet models then simulate iceberg calving processes and melt+calving together can be used to calculate the retreat or advance of outlet glacier termini through time.  
+
+A third dataset, salinity, has been processed in a similar way at the request of some modelling groups.
 
 # Organization of the repository
 In order to run the code within this repository, several required Python modules must be installed. All dependencies are listed in `requirements.txt`. One option is to setup a virtual environment and use this file to install all dependencies like this:
