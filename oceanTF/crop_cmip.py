@@ -19,8 +19,13 @@ def crop_cmip(cmipTfile,cmipSfile,roi,n_chunk=120):
     dsS = xr.open_dataset(cmipSfile)
 
     # get spatial coordinates
-    lat = dsT['lat'].values
-    lon = dsT['lon'].values
+    lat_raw = dsT['lat'].values
+    lon_raw = dsT['lon'].values
+    if np.shape(lat_raw)!=np.shape(lon_raw): ## likely 1D arrays
+        lon, lat = np.meshgrid(lon_raw,lat_raw)
+    else:
+        lon, lat = lon_raw, lat_raw
+
     latlon2polarstereo = Transformer.from_crs("EPSG:4326", "EPSG:3413", always_xy=True)
     x, y = latlon2polarstereo.transform(lon, lat)
 
