@@ -2,7 +2,7 @@ import xarray as xr
 import os
 import numpy as np
 
-def calc_cmip_TF(cmipTfile,cmipSfile,l1,l2,l3):
+def calc_cmip_TF(cmipTfile,cmipSfile,l1,l2,l3, depth_units='cm'):
 
     # output file
     outfile = cmipTfile.replace('thetao','TF')
@@ -14,7 +14,15 @@ def calc_cmip_TF(cmipTfile,cmipSfile,l1,l2,l3):
     dsS = xr.open_dataset(cmipSfile)
 
     # calculate TF
-    z = dsT['lev'].broadcast_like(dsS['so'])/1e2 # nb convert from cm to m
+    if depth_units=='cm':
+        print('Depth units provided are interpreted as cm. Converting to m for calculation.')
+        z = dsT['lev'].broadcast_like(dsS['so'])/1e2 # nb convert from cm to m
+    elif depth_units=='m':
+        print('Depth units provided are interpreted as m. No conversion applied.')
+        z = dsT['lev'].broadcast_like(dsS['so'])
+    else:
+        print('Unrecognized depth units provided.  Please specify cm or m, or update function.')
+        pass ## this will break it at next step...could write to throw error instead if feeling fancy
     Tfreeze = l1*dsS['so'] + l2 + l3*z
     TF = dsT['thetao'] - Tfreeze
 
